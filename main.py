@@ -1,75 +1,60 @@
-from privacy import sender
-from privacy import password
-import random
 import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import random
 
-class SecretSanta:
+# Email content
+sender_email = '' ################# Replace with your email address
+password = ''  ################### Replace with your email password (if gmail, you should create Apps password - Check README.md file)
 
-    def __init__(self):
-        self.info = dict()
-        self.selection = dict()
-        self.participants = 0
-        self.budget = 0
+# List of Secret Santa participants with their names and emails
+participants = [
+    {'name': 'Maria', 'email': 'maria@gmail.com'},
+    {'name': 'Maria', 'email': 'maria@gmail.com'},
+    {'name': 'Maria', 'email': 'maria@gmail.com'},
+    {'name': 'Maria', 'email': 'maria@gmail.com'},
+    {'name': 'Maria', 'email': 'maria@gmail.com'},
+    {'name': 'Maria', 'email': 'maria@gmail.com'},
+    {'name': 'Maria', 'email': 'maria@gmail.com'},
+    {'name': 'Maria', 'email': 'maria@gmail.com'},
+    {'name': 'Maria', 'email': 'maria@gmail.com'}
+]
 
-    # get all of the participants info
-    def get_info(self):
-        self.participants = int(input("How many people are participating in Secret Santa?: "))
-        self.budget = int(input("What is the budget for this Secret Santa?: "))
+# Shuffle the list to randomize participant order
+random.shuffle(participants)
 
-        for i in range(1, self.participants+1):
-            name = input("What is the name of participant {}?: ".format(i))
-            email = input("What is their email?: ")
-            address = input("What is their address?: ")
-            request = input("What are their gift requests? (separated by commas): ")
-            self.info[name] = [email, address, request]
+# Ensure no participant gets their own name
+for i, participant in enumerate(participants):
+    # Get the next participant in the list, ensuring the last one doesn't draw themselves
+    next_index = (i + 1) % len(participants)
+    # Assign the drawn person to the current participant
+    participant['drawn_name'] = participants[next_index]['name']
 
-    # assign a random secret santa for every participant
-    def assign(self):
-        choices = [name for name in self.info]
-        for person in self.info:
-            secret_person = random.choice(choices)
-            # no pairs for this selection process to avoid any left out participant
-            while secret_person == person or secret_person in self.selection:
-                secret_person = random.choice(choices)
-                if secret_person in self.selection and self.selection[secret_person] == person:
-                    continue
-                elif secret_person == person:
-                    continue
-                break
-            self.selection[person] = secret_person
-            ind = choices.index(secret_person)
-            choices.pop(ind)
+# Email body
+subject = 'Secret Santa 2023'
 
-    # send every secret santa participant their secret person
-    def send_emails(self):
-        server = smtplib.SMTP("smtp.gmail.com", 587) # 587 (gmail port number)
-        server.starttls()
-        server.login(sender,password)
-        print("Login successful.")
-        for person,sp in self.selection.items():
-            receiver = self.info[person][0]
-            sp_address = self.info[sp][1]
-            sp_request = self.info[sp][2]
-            message = "SUBJECT: SECRET SANTA\n" \
-                      "Hello {},\n\n" \
-                      "SHHH, your secret santa person is: {}.\n\n" \
-                      "The budget of the gift exchange is ${}.\n\n" \
-                      "Here is {}'s wishlist: {}\n\n" \
-                      "This is their address to send the gift: {}\n\n" \
-                      "Enjoy!".format(person,sp,self.budget,sp,sp_request,sp_address)
-            server.sendmail(sender,receiver,message)
-            print("{} has been sent their secret person.".format(person))
-        server.quit()
+# Establishing a connection with the SMTP server (Gmail in this case)
+server = smtplib.SMTP('smtp.gmail.com', 587)
+server.starttls()
+server.login(sender_email, password)
 
-    def start(self):
-        self.get_info()
-        self.assign()
-        self.send_emails()
+# Sending individual emails to each participant with their assigned person
+for participant in participants:
+    receiver_name = participant['name']
+    receiver_email = participant['email']
+    drawn_person = participant['drawn_name']
+    
+    body = f'Hi {receiver_name},\n You are invited to participate in Secret Santa 2023! \n\n Your secret santa is: ** {drawn_person.upper()} **. \n\n The budget of the gift exchange is from £ 25. Here is the wishlist: https://docs.google.com/document/blablabla/edit. \n Please, add your suggestions in the wish list. \n\n\n Enjoy and see you there! \n Merry Christmas!!! \n 🤖hccBot' 
 
-if __name__ == '__main__':
-    secret_santa = SecretSanta()
-    secret_santa.start()
+    message = MIMEMultipart()
+    message['From'] = sender_email
+    message['To'] = receiver_email
+    message['Subject'] = subject
 
+    message.attach(MIMEText(body, 'plain'))
 
+    # Sending the email
+    server.sendmail(sender_email, receiver_email, message.as_string())
 
-
+# Quitting the server
+server.quit()
